@@ -1,0 +1,1 @@
+console.log('Spaceship Earth initialized');
