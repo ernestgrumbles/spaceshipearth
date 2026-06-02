@@ -1,1 +1,83 @@
-<!DOCTYPE html><html><head><meta charset='utf-8'><title>Spaceship Earth</title><link rel='stylesheet' href='css/styles.css'></head><body><div id='app'><h1>Spaceship Earth</h1><p>Perihelion OS repository initialized.</p><p>Next commit: Three.js bridge interface.</p></div><script src='js/app.js'></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spaceship Earth / Perihelion OS</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="backdrop"></div>
+  <canvas id="scene"></canvas>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">Perihelion OS</div>
+      <div class="mode">Spaceship Earth · Bridge View</div>
+      <div class="clock"><strong id="time">--:--:-- UTC</strong><span id="date">Loading</span></div>
+    </header>
+
+    <main class="main">
+      <div class="label" id="homeLabel">HOME PORT</div>
+      <div class="label sun-label" id="sunLabel">☉ SOL</div>
+      <div class="label sun-label" id="subsolarLabel">SUN OVERHEAD</div>
+
+      <section class="card left">
+        <h2>Home Port</h2>
+        <div class="status"><span class="dot"></span><span id="homeStatus">Location standby</span></div>
+        <p><span>Position</span><strong id="homePosition">Permission needed</strong></p>
+        <p><span>Local time</span><strong id="localTime">--</strong></p>
+        <p><span>Daylight state</span><strong id="daylightState">calculating</strong></p>
+        <button id="locBtn">Allow location</button>
+        <button id="followBtn">Follow me: off</button>
+      </section>
+
+      <section class="card right">
+        <h2>Solar Geometry</h2>
+        <div class="status"><span class="dot"></span><span>Sun vector locked</span></div>
+        <p><span>Subsolar lat</span><strong id="subsolarLat">--</strong></p>
+        <p><span>Subsolar lon</span><strong id="subsolarLon">--</strong></p>
+        <p><span>Solar bearing</span><strong>screen left</strong></p>
+        <p><span>Declination</span><strong id="declination">--</strong></p>
+      </section>
+
+      <section class="card left2">
+        <h2>Navigation</h2>
+        <p><span>Moon phase</span><strong id="moonPhase">calculating</strong></p>
+        <p><span>Moon age</span><strong id="moonAge">-- days</strong></p>
+        <p><span>Distance since open</span><strong id="distanceOpen">0 km</strong></p>
+        <p><span>Today around Sol</span><strong id="distanceToday">0 km</strong></p>
+      </section>
+
+      <section class="card right2">
+        <h2>Orbital Assets</h2>
+        <p><span>ISS position</span><strong id="iss">loading</strong></p>
+        <p><span>Solar wind</span><strong id="solarWind">loading</strong></p>
+        <p><span>M4.5+ quakes</span><strong id="quakeCount">loading</strong></p>
+        <button id="refreshBtn">Refresh feeds</button>
+      </section>
+
+      <div class="readouts">
+        <div class="readout"><span>Orbital velocity</span><strong>29.78 km/s</strong></div>
+        <div class="readout"><span>Axial tilt</span><strong>23.44°</strong></div>
+        <div class="readout"><span>Atmosphere</span><strong>N₂ / O₂ stable</strong></div>
+        <div class="readout"><span>Mission state</span><strong>Operational</strong></div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div><div class="log-title">Reality Stack</div><div class="copy muted">Known: stable orbit<br>Watched: local day/night, star weather<br>Feared: big rocks, bad choices</div></div>
+      <div class="log"><h2>Ship's Log</h2><p id="shipLog">Loading planetary log...</p></div>
+      <div><div class="log-title">Event Stream</div><div class="copy muted">Three.js · Earth texture · Moon · USGS · NOAA · ISS</div></div>
+    </footer>
+  </div>
+
+  <div class="notice" id="notice">
+    <h2>Renderer note</h2>
+    <p>The bridge renderer is still powering up. If this persists, refresh after GitHub Pages finishes deploying.</p>
+    <button id="noticeClose">Got it</button>
+  </div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
