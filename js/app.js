@@ -14,6 +14,7 @@ let yaw = 0;
 
 const EARTH_RADIUS = 1.56;
 const MARKER_RADIUS = EARTH_RADIUS + 0.055;
+const PRESENTATION_SPIN = 0.00055;
 const loader = new THREE.TextureLoader();
 loader.crossOrigin = 'anonymous';
 
@@ -117,7 +118,6 @@ function init() {
 
   makeSunVector();
   makeOrbitRings();
-
   $('subsolarLabel').style.display = 'none';
 
   window.addEventListener('resize', resize);
@@ -220,10 +220,13 @@ function animate() {
 
   const now = new Date();
   const sun = solarGeometry(now);
-  const utc = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-  let target = (utc / 24) * Math.PI * 2;
-  if (followMe && home) target = THREE.MathUtils.degToRad(-home.lon - 90);
-  yaw += shortestAngle(target - yaw) * 0.025;
+
+  if (followMe && home) {
+    const target = THREE.MathUtils.degToRad(-home.lon - 90);
+    yaw += shortestAngle(target - yaw) * 0.025;
+  } else {
+    yaw += PRESENTATION_SPIN;
+  }
 
   globe.rotation.y = yaw;
   clouds.rotation.y += 0.00038;
