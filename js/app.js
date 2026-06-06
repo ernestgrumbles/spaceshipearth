@@ -5,13 +5,15 @@ const pad = (n) => String(n).padStart(2, '0');
 const ORBITAL_SPEED = 29.78;
 const openedAt = performance.now();
 
-let scene, camera, renderer, earthRig, earth, clouds, lights, moon, homeMarker, sunMarker;
+let scene, camera, renderer, globe, earth, clouds, lights, moon, homeMarker;
 let home = null;
 let followMe = false;
 let mouseX = 0;
 let mouseY = 0;
 let yaw = 0;
 
+const EARTH_RADIUS = 1.56;
+const MARKER_RADIUS = EARTH_RADIUS + 0.055;
 const loader = new THREE.TextureLoader();
 loader.crossOrigin = 'anonymous';
 
@@ -40,88 +42,83 @@ function init() {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 0.22, 7.35);
+  camera.position.set(0, 0.24, 7.55);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  scene.add(new THREE.AmbientLight(0x17283a, 0.95));
+  scene.add(new THREE.AmbientLight(0x142434, 0.78));
 
-  const sol = new THREE.DirectionalLight(0xfff2cc, 4.0);
-  sol.position.set(-5, 1.6, 3.8);
+  const sol = new THREE.DirectionalLight(0xfff2cc, 4.6);
+  sol.position.set(-5, 1.65, 3.8);
   scene.add(sol);
 
   const rim = new THREE.DirectionalLight(0x6de8ff, 1.35);
   rim.position.set(4.2, 1.2, -2.4);
   scene.add(rim);
 
-  earthRig = new THREE.Group();
-  earthRig.position.set(0, -0.18, 0);
-  scene.add(earthRig);
+  globe = new THREE.Group();
+  globe.position.set(0, -0.18, 0);
+  scene.add(globe);
 
-  const earthRadius = 1.66;
   earth = new THREE.Mesh(
-    new THREE.SphereGeometry(earthRadius, 128, 128),
+    new THREE.SphereGeometry(EARTH_RADIUS, 128, 128),
     new THREE.MeshPhongMaterial({
       map: texture('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'),
       shininess: 14,
       specular: new THREE.Color(0x1b3458),
     }),
   );
-  earth.rotation.y = Math.PI;
-  earthRig.add(earth);
+  globe.add(earth);
 
   lights = new THREE.Mesh(
-    new THREE.SphereGeometry(earthRadius + 0.004, 128, 128),
+    new THREE.SphereGeometry(EARTH_RADIUS + 0.004, 128, 128),
     new THREE.MeshBasicMaterial({
       map: texture('https://threejs.org/examples/textures/planets/earth_lights_2048.png'),
       transparent: true,
-      opacity: 0.44,
+      opacity: 0.34,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }),
   );
-  lights.rotation.y = Math.PI;
-  earthRig.add(lights);
+  globe.add(lights);
 
   clouds = new THREE.Mesh(
-    new THREE.SphereGeometry(earthRadius + 0.027, 128, 128),
+    new THREE.SphereGeometry(EARTH_RADIUS + 0.027, 128, 128),
     new THREE.MeshLambertMaterial({
       map: texture('https://threejs.org/examples/textures/planets/earth_clouds_1024.png'),
       transparent: true,
-      opacity: 0.37,
+      opacity: 0.35,
       depthWrite: false,
     }),
   );
-  clouds.rotation.y = Math.PI;
-  earthRig.add(clouds);
+  globe.add(clouds);
 
   const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(earthRadius + 0.13, 128, 128),
+    new THREE.SphereGeometry(EARTH_RADIUS + 0.13, 128, 128),
     new THREE.MeshBasicMaterial({
       color: 0x6de8ff,
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.14,
       side: THREE.BackSide,
       blending: THREE.AdditiveBlending,
     }),
   );
-  earthRig.add(atmosphere);
+  globe.add(atmosphere);
 
   homeMarker = marker(0x6de8ff, 0.026);
   homeMarker.visible = false;
-  earthRig.add(homeMarker);
-
-  sunMarker = marker(0xffd06f, 0.024);
-  earthRig.add(sunMarker);
+  globe.add(homeMarker);
 
   moon = makeMoon();
   scene.add(moon);
 
   makeSunVector();
   makeOrbitRings();
+
+  $('subsolarLabel').style.display = 'none';
 
   window.addEventListener('resize', resize);
   document.addEventListener('mousemove', (event) => {
@@ -154,16 +151,16 @@ function marker(color, size) {
 function makeMoon() {
   const g = new THREE.Group();
   const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.28, 64, 64),
+    new THREE.SphereGeometry(0.27, 64, 64),
     new THREE.MeshPhongMaterial({ map: texture('https://threejs.org/examples/textures/planets/moon_1024.jpg'), shininess: 2 }),
   );
   g.add(mesh);
-  g.position.set(3.38, 1.08, 0.1);
+  g.position.set(3.05, 1.05, 0.05);
   return g;
 }
 
 function makeSunVector() {
-  const mat = new THREE.LineBasicMaterial({ color: 0xffd06f, transparent: true, opacity: 0.58 });
+  const mat = new THREE.LineBasicMaterial({ color: 0xffd06f, transparent: true, opacity: 0.6 });
   scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(-4.75, 1.22, 0),
     new THREE.Vector3(-2.25, 0.48, 0),
@@ -174,18 +171,18 @@ function makeSunVector() {
 }
 
 function makeOrbitRings() {
-  const mat = new THREE.LineBasicMaterial({ color: 0x6de8ff, transparent: true, opacity: 0.11 });
-  for (const r of [2.15, 2.58, 3.02]) {
+  const mat = new THREE.LineBasicMaterial({ color: 0x6de8ff, transparent: true, opacity: 0.065 });
+  for (const r of [2.05, 2.48, 2.92]) {
     const pts = [];
     for (let i = 0; i <= 240; i++) {
       const a = (i / 240) * Math.PI * 2;
-      pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 0.16 - 0.18, -0.18));
+      pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 0.15 - 0.18, -0.18));
     }
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
   }
 }
 
-function latLonToVector3(lat, lon, radius = 1.72) {
+function latLonToVector3(lat, lon, radius = MARKER_RADIUS) {
   const phi = (90 - lat) * Math.PI / 180;
   const theta = (lon + 180) * Math.PI / 180;
   return new THREE.Vector3(
@@ -195,18 +192,24 @@ function latLonToVector3(lat, lon, radius = 1.72) {
   );
 }
 
-function setMarkerLatLon(obj, lat, lon) {
-  obj.position.copy(latLonToVector3(lat, lon));
-  obj.lookAt(new THREE.Vector3(0, 0, 0));
+function setHomeMarker() {
+  if (!home) return;
+  homeMarker.position.copy(latLonToVector3(home.lat, home.lon));
+  homeMarker.lookAt(new THREE.Vector3(0, 0, 0));
 }
 
 function labelObject(obj, label, dx = 66, dy = -10) {
-  const v = new THREE.Vector3();
-  obj.getWorldPosition(v);
-  v.project(camera);
-  const x = (v.x * 0.5 + 0.5) * window.innerWidth;
-  const y = (-v.y * 0.5 + 0.5) * window.innerHeight;
-  const onscreen = v.z < 1 && x > 0 && x < window.innerWidth && y > 0 && y < window.innerHeight;
+  const world = new THREE.Vector3();
+  obj.getWorldPosition(world);
+  const cameraDirection = new THREE.Vector3();
+  camera.getWorldDirection(cameraDirection);
+  const inFrontOfCamera = world.clone().sub(camera.position).dot(cameraDirection) > 0;
+  const normal = world.clone().sub(globe.position).normalize();
+  const facingCamera = normal.dot(camera.position.clone().sub(world).normalize()) > -0.15;
+  world.project(camera);
+  const x = (world.x * 0.5 + 0.5) * window.innerWidth;
+  const y = (-world.y * 0.5 + 0.5) * window.innerHeight;
+  const onscreen = inFrontOfCamera && facingCamera && world.z < 1 && x > 0 && x < window.innerWidth && y > 0 && y < window.innerHeight;
   label.style.left = `${x + dx}px`;
   label.style.top = `${y + dy}px`;
   label.style.display = onscreen ? 'block' : 'none';
@@ -219,27 +222,22 @@ function animate() {
   const sun = solarGeometry(now);
   const utc = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
   let target = (utc / 24) * Math.PI * 2;
-  if (followMe && home) target = -THREE.MathUtils.degToRad(home.lon);
-  yaw += (target - yaw) * 0.025;
+  if (followMe && home) target = THREE.MathUtils.degToRad(-home.lon - 90);
+  yaw += shortestAngle(target - yaw) * 0.025;
 
-  earthRig.rotation.y = yaw;
-  earth.rotation.y += 0.00036;
-  clouds.rotation.y += 0.00067;
-  lights.rotation.y = earth.rotation.y;
+  globe.rotation.y = yaw;
+  clouds.rotation.y += 0.00038;
 
   moon.rotation.y += 0.0012;
-  moon.position.x = 3.38 + Math.sin(performance.now() / 9000) * 0.06;
-  moon.position.y = 1.08 + Math.cos(performance.now() / 11000) * 0.03;
+  moon.position.x = 3.05 + Math.sin(performance.now() / 9000) * 0.06;
+  moon.position.y = 1.05 + Math.cos(performance.now() / 11000) * 0.03;
 
   camera.position.x += (mouseX * 0.16 - camera.position.x) * 0.03;
-  camera.position.y += (0.22 - mouseY * 0.09 - camera.position.y) * 0.03;
-  camera.lookAt(0, -0.05, 0);
-
-  setMarkerLatLon(sunMarker, sun.subsolarLat, sun.subsolarLon);
-  labelObject(sunMarker, $('subsolarLabel'), 64, -8);
+  camera.position.y += (0.24 - mouseY * 0.09 - camera.position.y) * 0.03;
+  camera.lookAt(0, -0.06, 0);
 
   if (home) {
-    setMarkerLatLon(homeMarker, home.lat, home.lon);
+    setHomeMarker();
     homeMarker.visible = true;
     $('daylightState').textContent = isDayAt(home.lat, home.lon, sun) ? 'Day side' : 'Night side';
     labelObject(homeMarker, $('homeLabel'), 68, -10);
@@ -252,6 +250,10 @@ function animate() {
   $('declination').textContent = `${sun.declination.toFixed(2)}°`;
 
   renderer.render(scene, camera);
+}
+
+function shortestAngle(angle) {
+  return Math.atan2(Math.sin(angle), Math.cos(angle));
 }
 
 function resize() {
@@ -332,6 +334,7 @@ function requestHomePort() {
     followMe = true;
     $('followBtn').textContent = 'Follow me: on';
     $('followBtn').classList.add('toggle-on');
+    setHomeMarker();
     refreshData();
   }, () => {
     $('homeStatus').textContent = 'Location denied';
