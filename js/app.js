@@ -6,7 +6,7 @@ const ORBITAL_SPEED = 29.78;
 const openedAt = performance.now();
 
 let scene, camera, renderer;
-let globe, earth, clouds, lights, moon, moonMesh, homeMarker, sunObject;
+let globe, earth, clouds, lights, moon, moonMesh, homeMarker, subsolarMarker, terminatorLine, sunObject;
 let home = null;
 let followMe = false;
 let mouseX = 0;
@@ -114,6 +114,13 @@ function init() {
   homeMarker.visible = false;
   globe.add(homeMarker);
 
+  subsolarMarker = marker(0xffd06f, 0.018);
+  subsolarMarker.visible = false;
+  globe.add(subsolarMarker);
+
+  terminatorLine = makeTerminatorLine();
+  globe.add(terminatorLine);
+
   moon = makeMoon();
   scene.add(moon);
 
@@ -195,6 +202,18 @@ function makeOrbitRings() {
   }
 }
 
+function makeTerminatorLine() {
+  const geometry = new THREE.BufferGeometry();
+  const material = new THREE.LineBasicMaterial({
+    color: 0x6de8ff,
+    transparent: true,
+    opacity: 0.38,
+  });
+  const line = new THREE.LineLoop(geometry, material);
+  line.visible = true;
+  return line;
+}
+
 function latLonToVector3(lat, lon, radius = MARKER_RADIUS) {
   const phi = (90 - lat) * Math.PI / 180;
   const theta = (lon + 180) * Math.PI / 180;
@@ -211,16 +230,44 @@ function setHomeMarker() {
   homeMarker.lookAt(new THREE.Vector3(0, 0, 0));
 }
 
+function setSubsolarMarker(sun) {
+  subsolarMarker.position.copy(latLonToVector3(sun.subsolarLat, sun.subsolarLon, EARTH_RADIUS + 0.07));
+  subsolarMarker.lookAt(new THREE.Vector3(0, 0, 0));
+  subsolarMarker.visible = isObjectFront(subsolarMarker);
+}
+
+function updateTerminatorLine(sun) {
+  const sunVector = latLonToVector3(sun.subsolarLat, sun.subsolarLon, 1).normalize();
+  const reference = Math.abs(sunVector.y) > 0.92 ? new THREE.Vector3(1, 0, 0) : new THREE.Vector3(0, 1, 0);
+  const u = new THREE.Vector3().crossVectors(sunVector, reference).normalize();
+  const v = new THREE.Vector3().crossVectors(sunVector, u).normalize();
+  const radius = EARTH_RADIUS + 0.045;
+  const points = [];
+
+  for (let i = 0; i < 256; i++) {
+    const a = (i / 256) * Math.PI * 2;
+    points.push(new THREE.Vector3()
+      .copy(u).multiplyScalar(Math.cos(a) * radius)
+      .add(v.clone().multiplyScalar(Math.sin(a) * radius)));
+  }
+
+  terminatorLine.geometry.setFromPoints(points);
+}
+
+function isObjectFront(obj) {
+  const world = new THREE.Vector3();
+  obj.getWorldPosition(world);
+  const normal = world.clone().sub(globe.position).normalize();
+  return normal.dot(camera.position.clone().sub(world).normalize()) > -0.08;
+}
+
 function labelObject(obj, label, dx = 38, dy = -10, requireFront = true) {
   if (!label) return;
   const world = new THREE.Vector3();
   obj.getWorldPosition(world);
 
   let facingCamera = true;
-  if (requireFront && globe) {
-    const normal = world.clone().sub(globe.position).normalize();
-    facingCamera = normal.dot(camera.position.clone().sub(world).normalize()) > -0.12;
-  }
+  if (requireFront && globe) facingCamera = isObjectFront(obj);
 
   world.project(camera);
   const x = (world.x * 0.5 + 0.5) * window.innerWidth;
@@ -247,6 +294,9 @@ function animate() {
 
   globe.rotation.y = yaw;
   clouds.rotation.y += 0.00035;
+
+  setSubsolarMarker(sun);
+  updateTerminatorLine(sun);
 
   const t = performance.now();
   moon.position.x = 2.34 + Math.sin(t / 13000) * 0.045;
