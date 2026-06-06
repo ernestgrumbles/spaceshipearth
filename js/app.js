@@ -5,20 +5,19 @@ const pad = (n) => String(n).padStart(2, '0');
 const ORBITAL_SPEED = 29.78;
 const openedAt = performance.now();
 
-let scene, camera, renderer, earthGroup, earth, clouds, nightLights, atmosphere, moon;
-let homeMarker3D, subsolarMarker3D;
+let scene, camera, renderer, earthRig, earth, clouds, lights, moon, homeMarker, sunMarker;
 let home = null;
 let followMe = false;
 let mouseX = 0;
 let mouseY = 0;
-let currentYaw = 0;
+let yaw = 0;
 
 const loader = new THREE.TextureLoader();
 loader.crossOrigin = 'anonymous';
 
-function showNotice() {
-  const notice = $('notice');
-  if (notice) notice.style.display = 'block';
+function notice() {
+  const el = $('notice');
+  if (el) el.style.display = 'block';
 }
 
 try {
@@ -26,99 +25,97 @@ try {
   animate();
 } catch (error) {
   console.error(error);
-  showNotice();
+  notice();
 }
 
-tickClock();
-tickMotion();
+updateClock();
+updateMotion();
 refreshData();
-setInterval(tickClock, 1000);
-setInterval(tickMotion, 1000);
+setInterval(updateClock, 1000);
+setInterval(updateMotion, 1000);
 setInterval(refreshData, 10 * 60 * 1000);
 
 function init() {
   const canvas = $('scene');
   scene = new THREE.Scene();
 
-  camera = new THREE.PerspectiveCamera(36, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 0.18, 6.4);
+  camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0.22, 7.35);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  scene.add(new THREE.AmbientLight(0x172536, 1.0));
+  scene.add(new THREE.AmbientLight(0x17283a, 0.95));
 
-  const sunLight = new THREE.DirectionalLight(0xfff2cc, 4.2);
-  sunLight.position.set(-5, 1.5, 3.6);
-  scene.add(sunLight);
+  const sol = new THREE.DirectionalLight(0xfff2cc, 4.0);
+  sol.position.set(-5, 1.6, 3.8);
+  scene.add(sol);
 
-  const rimLight = new THREE.DirectionalLight(0x6de8ff, 1.35);
-  rimLight.position.set(4, 1, -2);
-  scene.add(rimLight);
+  const rim = new THREE.DirectionalLight(0x6de8ff, 1.35);
+  rim.position.set(4.2, 1.2, -2.4);
+  scene.add(rim);
 
-  earthGroup = new THREE.Group();
-  earthGroup.position.set(0, 0.02, 0);
-  scene.add(earthGroup);
+  earthRig = new THREE.Group();
+  earthRig.position.set(0, -0.18, 0);
+  scene.add(earthRig);
 
-  const earthDay = loadTexture('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg');
+  const earthRadius = 1.66;
   earth = new THREE.Mesh(
-    new THREE.SphereGeometry(1.86, 128, 128),
+    new THREE.SphereGeometry(earthRadius, 128, 128),
     new THREE.MeshPhongMaterial({
-      map: earthDay,
+      map: texture('https://threejs.org/examples/textures/planets/earth_atmos_2048.jpg'),
       shininess: 14,
       specular: new THREE.Color(0x1b3458),
     }),
   );
   earth.rotation.y = Math.PI;
-  earthGroup.add(earth);
+  earthRig.add(earth);
 
-  const nightTex = loadTexture('https://threejs.org/examples/textures/planets/earth_lights_2048.png');
-  nightLights = new THREE.Mesh(
-    new THREE.SphereGeometry(1.864, 128, 128),
+  lights = new THREE.Mesh(
+    new THREE.SphereGeometry(earthRadius + 0.004, 128, 128),
     new THREE.MeshBasicMaterial({
-      map: nightTex,
+      map: texture('https://threejs.org/examples/textures/planets/earth_lights_2048.png'),
       transparent: true,
-      opacity: 0.48,
+      opacity: 0.44,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }),
   );
-  nightLights.rotation.y = Math.PI;
-  earthGroup.add(nightLights);
+  lights.rotation.y = Math.PI;
+  earthRig.add(lights);
 
-  const cloudTex = loadTexture('https://threejs.org/examples/textures/planets/earth_clouds_1024.png');
   clouds = new THREE.Mesh(
-    new THREE.SphereGeometry(1.889, 128, 128),
+    new THREE.SphereGeometry(earthRadius + 0.027, 128, 128),
     new THREE.MeshLambertMaterial({
-      map: cloudTex,
+      map: texture('https://threejs.org/examples/textures/planets/earth_clouds_1024.png'),
       transparent: true,
-      opacity: 0.38,
+      opacity: 0.37,
       depthWrite: false,
     }),
   );
   clouds.rotation.y = Math.PI;
-  earthGroup.add(clouds);
+  earthRig.add(clouds);
 
-  atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(2.0, 128, 128),
+  const atmosphere = new THREE.Mesh(
+    new THREE.SphereGeometry(earthRadius + 0.13, 128, 128),
     new THREE.MeshBasicMaterial({
       color: 0x6de8ff,
       transparent: true,
-      opacity: 0.16,
+      opacity: 0.15,
       side: THREE.BackSide,
       blending: THREE.AdditiveBlending,
     }),
   );
-  earthGroup.add(atmosphere);
+  earthRig.add(atmosphere);
 
-  homeMarker3D = makeMarker(0x6de8ff, 0.029);
-  homeMarker3D.visible = false;
-  earthGroup.add(homeMarker3D);
+  homeMarker = marker(0x6de8ff, 0.026);
+  homeMarker.visible = false;
+  earthRig.add(homeMarker);
 
-  subsolarMarker3D = makeMarker(0xffd06f, 0.026);
-  earthGroup.add(subsolarMarker3D);
+  sunMarker = marker(0xffd06f, 0.024);
+  earthRig.add(sunMarker);
 
   moon = makeMoon();
   scene.add(moon);
@@ -126,7 +123,7 @@ function init() {
   makeSunVector();
   makeOrbitRings();
 
-  window.addEventListener('resize', onResize);
+  window.addEventListener('resize', resize);
   document.addEventListener('mousemove', (event) => {
     mouseX = event.clientX / window.innerWidth - 0.5;
     mouseY = event.clientY / window.innerHeight - 0.5;
@@ -135,64 +132,60 @@ function init() {
   $('locBtn')?.addEventListener('click', requestHomePort);
   $('followBtn')?.addEventListener('click', toggleFollow);
   $('refreshBtn')?.addEventListener('click', refreshData);
-  $('noticeClose')?.addEventListener('click', () => {
-    $('notice').style.display = 'none';
-  });
+  $('noticeClose')?.addEventListener('click', () => { $('notice').style.display = 'none'; });
 }
 
-function loadTexture(url) {
-  const texture = loader.load(url, undefined, undefined, showNotice);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  return texture;
+function texture(url) {
+  const t = loader.load(url, undefined, undefined, notice);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
 }
 
-function makeMarker(color, size) {
-  const group = new THREE.Group();
-  group.add(new THREE.Mesh(new THREE.SphereGeometry(size, 24, 24), new THREE.MeshBasicMaterial({ color })));
-  group.add(
-    new THREE.Mesh(
-      new THREE.TorusGeometry(size * 2.35, size * 0.13, 10, 40),
-      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 }),
-    ),
-  );
-  return group;
+function marker(color, size) {
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.SphereGeometry(size, 24, 24), new THREE.MeshBasicMaterial({ color })));
+  g.add(new THREE.Mesh(
+    new THREE.TorusGeometry(size * 2.4, size * 0.13, 10, 40),
+    new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85 }),
+  ));
+  return g;
 }
 
 function makeMoon() {
-  const group = new THREE.Group();
-  const moonTex = loadTexture('https://threejs.org/examples/textures/planets/moon_1024.jpg');
+  const g = new THREE.Group();
   const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.32, 64, 64),
-    new THREE.MeshPhongMaterial({ map: moonTex, shininess: 2 }),
+    new THREE.SphereGeometry(0.28, 64, 64),
+    new THREE.MeshPhongMaterial({ map: texture('https://threejs.org/examples/textures/planets/moon_1024.jpg'), shininess: 2 }),
   );
-  group.add(mesh);
-  group.position.set(2.75, 0.88, 0.25);
-  return group;
+  g.add(mesh);
+  g.position.set(3.38, 1.08, 0.1);
+  return g;
 }
 
 function makeSunVector() {
-  const mat = new THREE.LineBasicMaterial({ color: 0xffd06f, transparent: true, opacity: 0.55 });
-  const points = [new THREE.Vector3(-4.45, 1.22, 0), new THREE.Vector3(-2.15, 0.55, 0)];
-  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), mat));
-
-  const sunGlow = new THREE.Mesh(new THREE.SphereGeometry(0.075, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffd06f }));
-  sunGlow.position.set(-4.55, 1.25, 0);
-  scene.add(sunGlow);
+  const mat = new THREE.LineBasicMaterial({ color: 0xffd06f, transparent: true, opacity: 0.58 });
+  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-4.75, 1.22, 0),
+    new THREE.Vector3(-2.25, 0.48, 0),
+  ]), mat));
+  const sun = new THREE.Mesh(new THREE.SphereGeometry(0.09, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffd06f }));
+  sun.position.set(-4.86, 1.25, 0);
+  scene.add(sun);
 }
 
 function makeOrbitRings() {
-  const mat = new THREE.LineBasicMaterial({ color: 0x6de8ff, transparent: true, opacity: 0.12 });
-  for (const radius of [2.35, 2.75, 3.18]) {
-    const points = [];
+  const mat = new THREE.LineBasicMaterial({ color: 0x6de8ff, transparent: true, opacity: 0.11 });
+  for (const r of [2.15, 2.58, 3.02]) {
+    const pts = [];
     for (let i = 0; i <= 240; i++) {
-      const angle = (i / 240) * Math.PI * 2;
-      points.push(new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius * 0.18 - 0.08, -0.18));
+      const a = (i / 240) * Math.PI * 2;
+      pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 0.16 - 0.18, -0.18));
     }
-    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), mat));
+    scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
   }
 }
 
-function latLonToVector3(lat, lon, radius = 1.94) {
+function latLonToVector3(lat, lon, radius = 1.72) {
   const phi = (90 - lat) * Math.PI / 180;
   const theta = (lon + 180) * Math.PI / 180;
   return new THREE.Vector3(
@@ -202,21 +195,21 @@ function latLonToVector3(lat, lon, radius = 1.94) {
   );
 }
 
-function setMarkerLatLon(marker, lat, lon) {
-  marker.position.copy(latLonToVector3(lat, lon, 1.94));
-  marker.lookAt(new THREE.Vector3(0, 0, 0));
+function setMarkerLatLon(obj, lat, lon) {
+  obj.position.copy(latLonToVector3(lat, lon));
+  obj.lookAt(new THREE.Vector3(0, 0, 0));
 }
 
-function worldToScreen(obj, label) {
-  const vector = new THREE.Vector3();
-  obj.getWorldPosition(vector);
-  vector.project(camera);
-  const visible = vector.z < 1;
-  const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-  const y = (-vector.y * 0.5 + 0.5) * window.innerHeight;
-  label.style.left = `${x + 68}px`;
-  label.style.top = `${y - 10}px`;
-  label.style.display = visible ? 'block' : 'none';
+function labelObject(obj, label, dx = 66, dy = -10) {
+  const v = new THREE.Vector3();
+  obj.getWorldPosition(v);
+  v.project(camera);
+  const x = (v.x * 0.5 + 0.5) * window.innerWidth;
+  const y = (-v.y * 0.5 + 0.5) * window.innerHeight;
+  const onscreen = v.z < 1 && x > 0 && x < window.innerWidth && y > 0 && y < window.innerHeight;
+  label.style.left = `${x + dx}px`;
+  label.style.top = `${y + dy}px`;
+  label.style.display = onscreen ? 'block' : 'none';
 }
 
 function animate() {
@@ -224,34 +217,32 @@ function animate() {
 
   const now = new Date();
   const sun = solarGeometry(now);
-  const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
-  const naturalYaw = (utcHours / 24) * Math.PI * 2;
-  let targetYaw = naturalYaw;
+  const utc = now.getUTCHours() + now.getUTCMinutes() / 60 + now.getUTCSeconds() / 3600;
+  let target = (utc / 24) * Math.PI * 2;
+  if (followMe && home) target = -THREE.MathUtils.degToRad(home.lon);
+  yaw += (target - yaw) * 0.025;
 
-  if (followMe && home) targetYaw = -THREE.MathUtils.degToRad(home.lon);
-  currentYaw += (targetYaw - currentYaw) * 0.025;
-
-  earthGroup.rotation.y = currentYaw;
-  earth.rotation.y += 0.00042;
-  clouds.rotation.y += 0.00072;
-  nightLights.rotation.y = earth.rotation.y;
+  earthRig.rotation.y = yaw;
+  earth.rotation.y += 0.00036;
+  clouds.rotation.y += 0.00067;
+  lights.rotation.y = earth.rotation.y;
 
   moon.rotation.y += 0.0012;
-  moon.position.x = 2.75 + Math.sin(performance.now() / 9000) * 0.08;
-  moon.position.y = 0.88 + Math.cos(performance.now() / 11000) * 0.035;
+  moon.position.x = 3.38 + Math.sin(performance.now() / 9000) * 0.06;
+  moon.position.y = 1.08 + Math.cos(performance.now() / 11000) * 0.03;
 
-  camera.position.x += (mouseX * 0.18 - camera.position.x) * 0.03;
-  camera.position.y += (0.18 - mouseY * 0.10 - camera.position.y) * 0.03;
-  camera.lookAt(0, 0, 0);
+  camera.position.x += (mouseX * 0.16 - camera.position.x) * 0.03;
+  camera.position.y += (0.22 - mouseY * 0.09 - camera.position.y) * 0.03;
+  camera.lookAt(0, -0.05, 0);
 
-  setMarkerLatLon(subsolarMarker3D, sun.subsolarLat, sun.subsolarLon);
-  worldToScreen(subsolarMarker3D, $('subsolarLabel'));
+  setMarkerLatLon(sunMarker, sun.subsolarLat, sun.subsolarLon);
+  labelObject(sunMarker, $('subsolarLabel'), 64, -8);
 
   if (home) {
-    setMarkerLatLon(homeMarker3D, home.lat, home.lon);
-    homeMarker3D.visible = true;
+    setMarkerLatLon(homeMarker, home.lat, home.lon);
+    homeMarker.visible = true;
     $('daylightState').textContent = isDayAt(home.lat, home.lon, sun) ? 'Day side' : 'Night side';
-    worldToScreen(homeMarker3D, $('homeLabel'));
+    labelObject(homeMarker, $('homeLabel'), 68, -10);
   } else {
     $('homeLabel').style.display = 'none';
   }
@@ -263,13 +254,13 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-function onResize() {
+function resize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function tickClock() {
+function updateClock() {
   const now = new Date();
   $('time').textContent = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}:${pad(now.getUTCSeconds())} UTC`;
   $('date').textContent = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
@@ -277,11 +268,10 @@ function tickClock() {
 }
 
 function formatKm(km) {
-  if (km > 1000000) return `${(km / 1000000).toFixed(2)}M km`;
-  return `${Math.round(km).toLocaleString()} km`;
+  return km > 1000000 ? `${(km / 1000000).toFixed(2)}M km` : `${Math.round(km).toLocaleString()} km`;
 }
 
-function tickMotion() {
+function updateMotion() {
   const now = new Date();
   const elapsed = (performance.now() - openedAt) / 1000;
   const today = now.getUTCHours() * 3600 + now.getUTCMinutes() * 60 + now.getUTCSeconds();
@@ -290,9 +280,9 @@ function tickMotion() {
 }
 
 function moonInfo(date = new Date()) {
-  const lunarPeriod = 2551443;
+  const period = 2551443;
   const base = new Date(Date.UTC(2001, 0, 24, 13, 35, 0)).getTime() / 1000;
-  const phase = ((date.getTime() / 1000 - base) % lunarPeriod) / lunarPeriod;
+  const phase = ((date.getTime() / 1000 - base) % period) / period;
   const age = phase * 29.530588853;
   let name = 'New';
   if (age < 1.84566) name = 'New';
@@ -357,8 +347,8 @@ function toggleFollow() {
 
 async function fetchQuakes() {
   try {
-    const response = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
-    const data = await response.json();
+    const r = await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_day.geojson');
+    const data = await r.json();
     const events = data.features || [];
     $('quakeCount').textContent = events.length;
     return { count: events.length };
@@ -370,8 +360,8 @@ async function fetchQuakes() {
 
 async function fetchISS() {
   try {
-    const response = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
-    const data = await response.json();
+    const r = await fetch('https://api.wheretheiss.at/v1/satellites/25544');
+    const data = await r.json();
     $('iss').textContent = `${data.latitude.toFixed(2)}°, ${data.longitude.toFixed(2)}°`;
   } catch {
     $('iss').textContent = 'offline';
@@ -380,8 +370,8 @@ async function fetchISS() {
 
 async function fetchSolarWind() {
   try {
-    const response = await fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json');
-    const rows = await response.json();
+    const r = await fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json');
+    const rows = await r.json();
     const last = rows.slice(1).reverse().find((row) => row[2]);
     $('solarWind').textContent = last ? `${Number(last[2]).toFixed(0)} km/s` : 'quiet';
   } catch {
