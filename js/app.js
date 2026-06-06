@@ -7,7 +7,6 @@ const openedAt = performance.now();
 
 let scene, camera, renderer;
 let globe, earth, clouds, lights, moon, moonMesh, homeMarker, sunObject;
-let moonLabel;
 let home = null;
 let followMe = false;
 let mouseX = 0;
@@ -123,11 +122,6 @@ function init() {
 
   $('subsolarLabel').style.display = 'none';
 
-  moonLabel = document.createElement('div');
-  moonLabel.className = 'label';
-  moonLabel.textContent = 'LUNA';
-  document.querySelector('.main')?.appendChild(moonLabel);
-
   window.addEventListener('resize', resize);
   document.addEventListener('mousemove', (event) => {
     mouseX = event.clientX / window.innerWidth - 0.5;
@@ -159,30 +153,31 @@ function marker(color, size) {
 function makeMoon() {
   const group = new THREE.Group();
   moonMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.34, 64, 64),
+    new THREE.SphereGeometry(0.31, 64, 64),
     new THREE.MeshPhongMaterial({ map: texture('https://threejs.org/examples/textures/planets/moon_1024.jpg'), shininess: 2 }),
   );
   group.add(moonMesh);
-  group.position.set(2.55, 1.18, -0.08);
+  group.position.set(2.18, 0.86, -0.08);
   return group;
 }
 
 function makeSunVector() {
   const group = new THREE.Group();
+  group.position.set(-4.92, 1.32, 0);
+
   const line = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(-4.8, 1.28, 0),
-      new THREE.Vector3(-2.20, 0.45, 0),
+      new THREE.Vector3(-0.04, 0.0, 0),
+      new THREE.Vector3(2.68, -0.84, 0),
     ]),
     new THREE.LineBasicMaterial({ color: 0xffd06f, transparent: true, opacity: 0.62 }),
   );
-  scene.add(line);
+  group.add(line);
 
   const sun = new THREE.Mesh(
     new THREE.SphereGeometry(0.105, 32, 32),
     new THREE.MeshBasicMaterial({ color: 0xffd06f }),
   );
-  sun.position.set(-4.92, 1.32, 0);
   group.add(sun);
   scene.add(group);
   return group;
@@ -216,7 +211,7 @@ function setHomeMarker() {
   homeMarker.lookAt(new THREE.Vector3(0, 0, 0));
 }
 
-function labelObject(obj, label, dx = 52, dy = -10, requireFront = true) {
+function labelObject(obj, label, dx = 38, dy = -10, requireFront = true) {
   if (!label) return;
   const world = new THREE.Vector3();
   obj.getWorldPosition(world);
@@ -254,8 +249,8 @@ function animate() {
   clouds.rotation.y += 0.00035;
 
   const t = performance.now();
-  moon.position.x = 2.55 + Math.sin(t / 13000) * 0.05;
-  moon.position.y = 1.18 + Math.cos(t / 11000) * 0.025;
+  moon.position.x = 2.18 + Math.sin(t / 13000) * 0.05;
+  moon.position.y = 0.86 + Math.cos(t / 11000) * 0.025;
   moon.lookAt(globe.position);
   moonMesh.rotation.y += 0.0007;
 
@@ -267,12 +262,11 @@ function animate() {
     setHomeMarker();
     homeMarker.visible = true;
     $('daylightState').textContent = isDayAt(home.lat, home.lon, sun) ? 'Day side' : 'Night side';
-    labelObject(homeMarker, $('homeLabel'), 54, -10, true);
+    labelObject(homeMarker, $('homeLabel'), 38, -10, true);
   } else {
     $('homeLabel').style.display = 'none';
   }
 
-  labelObject(moon, moonLabel, 46, -8, false);
   labelObject(sunObject, $('sunLabel'), 40, -8, false);
   $('subsolarLabel').style.display = 'none';
 
