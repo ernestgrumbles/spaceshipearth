@@ -5,16 +5,18 @@ const pad = (n) => String(n).padStart(2, '0');
 const ORBITAL_SPEED = 29.78;
 const openedAt = performance.now();
 
-let scene, camera, renderer, globe, earth, clouds, lights, moon, homeMarker;
+let scene, camera, renderer;
+let globe, earth, clouds, lights, moon, moonMesh, homeMarker, sunObject;
+let moonLabel;
 let home = null;
 let followMe = false;
 let mouseX = 0;
 let mouseY = 0;
 let yaw = 0;
 
-const EARTH_RADIUS = 1.56;
+const EARTH_RADIUS = 1.52;
 const MARKER_RADIUS = EARTH_RADIUS + 0.055;
-const PRESENTATION_SPIN = 0.00055;
+const PRESENTATION_SPIN = 0.0005;
 const loader = new THREE.TextureLoader();
 loader.crossOrigin = 'anonymous';
 
@@ -43,25 +45,25 @@ function init() {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 0.24, 7.55);
+  camera.position.set(0, 0.22, 7.55);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
-  scene.add(new THREE.AmbientLight(0x142434, 0.78));
+  scene.add(new THREE.AmbientLight(0x142434, 0.74));
 
-  const sol = new THREE.DirectionalLight(0xfff2cc, 4.6);
+  const sol = new THREE.DirectionalLight(0xfff2cc, 4.8);
   sol.position.set(-5, 1.65, 3.8);
   scene.add(sol);
 
-  const rim = new THREE.DirectionalLight(0x6de8ff, 1.35);
+  const rim = new THREE.DirectionalLight(0x6de8ff, 1.28);
   rim.position.set(4.2, 1.2, -2.4);
   scene.add(rim);
 
   globe = new THREE.Group();
-  globe.position.set(0, -0.18, 0);
+  globe.position.set(0, -0.20, 0);
   scene.add(globe);
 
   earth = new THREE.Mesh(
@@ -79,7 +81,7 @@ function init() {
     new THREE.MeshBasicMaterial({
       map: texture('https://threejs.org/examples/textures/planets/earth_lights_2048.png'),
       transparent: true,
-      opacity: 0.34,
+      opacity: 0.30,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }),
@@ -91,18 +93,18 @@ function init() {
     new THREE.MeshLambertMaterial({
       map: texture('https://threejs.org/examples/textures/planets/earth_clouds_1024.png'),
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.34,
       depthWrite: false,
     }),
   );
   globe.add(clouds);
 
   const atmosphere = new THREE.Mesh(
-    new THREE.SphereGeometry(EARTH_RADIUS + 0.13, 128, 128),
+    new THREE.SphereGeometry(EARTH_RADIUS + 0.12, 128, 128),
     new THREE.MeshBasicMaterial({
       color: 0x6de8ff,
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.12,
       side: THREE.BackSide,
       blending: THREE.AdditiveBlending,
     }),
@@ -116,9 +118,15 @@ function init() {
   moon = makeMoon();
   scene.add(moon);
 
-  makeSunVector();
+  sunObject = makeSunVector();
   makeOrbitRings();
+
   $('subsolarLabel').style.display = 'none';
+
+  moonLabel = document.createElement('div');
+  moonLabel.className = 'label';
+  moonLabel.textContent = 'LUNA';
+  document.querySelector('.main')?.appendChild(moonLabel);
 
   window.addEventListener('resize', resize);
   document.addEventListener('mousemove', (event) => {
@@ -149,34 +157,44 @@ function marker(color, size) {
 }
 
 function makeMoon() {
-  const g = new THREE.Group();
-  const mesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.27, 64, 64),
+  const group = new THREE.Group();
+  moonMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.34, 64, 64),
     new THREE.MeshPhongMaterial({ map: texture('https://threejs.org/examples/textures/planets/moon_1024.jpg'), shininess: 2 }),
   );
-  g.add(mesh);
-  g.position.set(3.05, 1.05, 0.05);
-  return g;
+  group.add(moonMesh);
+  group.position.set(2.55, 1.18, -0.08);
+  return group;
 }
 
 function makeSunVector() {
-  const mat = new THREE.LineBasicMaterial({ color: 0xffd06f, transparent: true, opacity: 0.6 });
-  scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-4.75, 1.22, 0),
-    new THREE.Vector3(-2.25, 0.48, 0),
-  ]), mat));
-  const sun = new THREE.Mesh(new THREE.SphereGeometry(0.09, 32, 32), new THREE.MeshBasicMaterial({ color: 0xffd06f }));
-  sun.position.set(-4.86, 1.25, 0);
-  scene.add(sun);
+  const group = new THREE.Group();
+  const line = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(-4.8, 1.28, 0),
+      new THREE.Vector3(-2.20, 0.45, 0),
+    ]),
+    new THREE.LineBasicMaterial({ color: 0xffd06f, transparent: true, opacity: 0.62 }),
+  );
+  scene.add(line);
+
+  const sun = new THREE.Mesh(
+    new THREE.SphereGeometry(0.105, 32, 32),
+    new THREE.MeshBasicMaterial({ color: 0xffd06f }),
+  );
+  sun.position.set(-4.92, 1.32, 0);
+  group.add(sun);
+  scene.add(group);
+  return group;
 }
 
 function makeOrbitRings() {
-  const mat = new THREE.LineBasicMaterial({ color: 0x6de8ff, transparent: true, opacity: 0.065 });
-  for (const r of [2.05, 2.48, 2.92]) {
+  const mat = new THREE.LineBasicMaterial({ color: 0x6de8ff, transparent: true, opacity: 0.045 });
+  for (const r of [2.0, 2.42, 2.86]) {
     const pts = [];
     for (let i = 0; i <= 240; i++) {
       const a = (i / 240) * Math.PI * 2;
-      pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 0.15 - 0.18, -0.18));
+      pts.push(new THREE.Vector3(Math.cos(a) * r, Math.sin(a) * r * 0.15 - 0.20, -0.18));
     }
     scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
   }
@@ -198,18 +216,22 @@ function setHomeMarker() {
   homeMarker.lookAt(new THREE.Vector3(0, 0, 0));
 }
 
-function labelObject(obj, label, dx = 66, dy = -10) {
+function labelObject(obj, label, dx = 52, dy = -10, requireFront = true) {
+  if (!label) return;
   const world = new THREE.Vector3();
   obj.getWorldPosition(world);
-  const cameraDirection = new THREE.Vector3();
-  camera.getWorldDirection(cameraDirection);
-  const inFrontOfCamera = world.clone().sub(camera.position).dot(cameraDirection) > 0;
-  const normal = world.clone().sub(globe.position).normalize();
-  const facingCamera = normal.dot(camera.position.clone().sub(world).normalize()) > -0.15;
+
+  let facingCamera = true;
+  if (requireFront && globe) {
+    const normal = world.clone().sub(globe.position).normalize();
+    facingCamera = normal.dot(camera.position.clone().sub(world).normalize()) > -0.12;
+  }
+
   world.project(camera);
   const x = (world.x * 0.5 + 0.5) * window.innerWidth;
   const y = (-world.y * 0.5 + 0.5) * window.innerHeight;
-  const onscreen = inFrontOfCamera && facingCamera && world.z < 1 && x > 0 && x < window.innerWidth && y > 0 && y < window.innerHeight;
+  const onscreen = facingCamera && world.z < 1 && x > 0 && x < window.innerWidth && y > 0 && y < window.innerHeight;
+
   label.style.left = `${x + dx}px`;
   label.style.top = `${y + dy}px`;
   label.style.display = onscreen ? 'block' : 'none';
@@ -229,24 +251,30 @@ function animate() {
   }
 
   globe.rotation.y = yaw;
-  clouds.rotation.y += 0.00038;
+  clouds.rotation.y += 0.00035;
 
-  moon.rotation.y += 0.0012;
-  moon.position.x = 3.05 + Math.sin(performance.now() / 9000) * 0.06;
-  moon.position.y = 1.05 + Math.cos(performance.now() / 11000) * 0.03;
+  const t = performance.now();
+  moon.position.x = 2.55 + Math.sin(t / 13000) * 0.05;
+  moon.position.y = 1.18 + Math.cos(t / 11000) * 0.025;
+  moon.lookAt(globe.position);
+  moonMesh.rotation.y += 0.0007;
 
-  camera.position.x += (mouseX * 0.16 - camera.position.x) * 0.03;
-  camera.position.y += (0.24 - mouseY * 0.09 - camera.position.y) * 0.03;
-  camera.lookAt(0, -0.06, 0);
+  camera.position.x += (mouseX * 0.15 - camera.position.x) * 0.03;
+  camera.position.y += (0.22 - mouseY * 0.09 - camera.position.y) * 0.03;
+  camera.lookAt(0, -0.08, 0);
 
   if (home) {
     setHomeMarker();
     homeMarker.visible = true;
     $('daylightState').textContent = isDayAt(home.lat, home.lon, sun) ? 'Day side' : 'Night side';
-    labelObject(homeMarker, $('homeLabel'), 68, -10);
+    labelObject(homeMarker, $('homeLabel'), 54, -10, true);
   } else {
     $('homeLabel').style.display = 'none';
   }
+
+  labelObject(moon, moonLabel, 46, -8, false);
+  labelObject(sunObject, $('sunLabel'), 40, -8, false);
+  $('subsolarLabel').style.display = 'none';
 
   $('subsolarLat').textContent = `${sun.subsolarLat.toFixed(2)}°`;
   $('subsolarLon').textContent = `${sun.subsolarLon.toFixed(2)}°`;
