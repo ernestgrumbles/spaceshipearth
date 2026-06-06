@@ -13,7 +13,7 @@ let mouseX = 0;
 let mouseY = 0;
 let yaw = 0;
 
-const EARTH_RADIUS = 1.52;
+const EARTH_RADIUS = 1.61;
 const MARKER_RADIUS = EARTH_RADIUS + 0.055;
 const PRESENTATION_SPIN = 0.0005;
 const loader = new THREE.TextureLoader();
@@ -44,7 +44,7 @@ function init() {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 0.22, 7.55);
+  camera.position.set(0, 0.22, 7.42);
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -153,11 +153,11 @@ function marker(color, size) {
 function makeMoon() {
   const group = new THREE.Group();
   moonMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(0.31, 64, 64),
+    new THREE.SphereGeometry(0.30, 64, 64),
     new THREE.MeshPhongMaterial({ map: texture('https://threejs.org/examples/textures/planets/moon_1024.jpg'), shininess: 2 }),
   );
   group.add(moonMesh);
-  group.position.set(2.18, 0.86, -0.08);
+  group.position.set(2.34, 0.92, -0.08);
   return group;
 }
 
@@ -249,8 +249,8 @@ function animate() {
   clouds.rotation.y += 0.00035;
 
   const t = performance.now();
-  moon.position.x = 2.18 + Math.sin(t / 13000) * 0.05;
-  moon.position.y = 0.86 + Math.cos(t / 11000) * 0.025;
+  moon.position.x = 2.34 + Math.sin(t / 13000) * 0.045;
+  moon.position.y = 0.92 + Math.cos(t / 11000) * 0.022;
   moon.lookAt(globe.position);
   moonMesh.rotation.y += 0.0007;
 
