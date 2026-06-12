@@ -28,11 +28,12 @@ export function createLunarMaterial(texture) {
         float waning = step(0.5, phase);
         float side = mix(1.0, -1.0, waning);
         float phaseOffset = (illum - 0.5) * 1.15;
-        float falloff = smoothstep(phaseOffset - 1.20, phaseOffset + 1.20, side * vNormal.x);
+        float falloff = smoothstep(phaseOffset - 1.05, phaseOffset + 1.05, side * vNormal.x);
         float limb = smoothstep(0.0, 1.0, max(vNormal.z, 0.0));
-        float earthshine = 0.18;
-        float light = earthshine + falloff * 0.88;
-        light *= 0.70 + limb * 0.30;
+        float earthshine = 0.07;
+        float light = earthshine + falloff * 1.18;
+        light *= 0.72 + limb * 0.34;
+        light = clamp(light, 0.0, 1.18);
         gl_FragColor = vec4(texel * light, 1.0);
       }
     `,
