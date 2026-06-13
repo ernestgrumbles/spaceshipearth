@@ -25,6 +25,8 @@ export function createLunarMaterial(texture) {
 
       void main() {
         vec3 texel = texture2D(moonMap, vUv).rgb;
+        texel = pow(texel, vec3(0.82));
+
         float waning = step(0.5, phase);
         float side = mix(1.0, -1.0, waning);
         float phaseAxis = side * vNormal.x;
@@ -32,13 +34,14 @@ export function createLunarMaterial(texture) {
         float falloff = smoothstep(litThreshold - 0.10, litThreshold + 0.10, phaseAxis);
 
         float limb = smoothstep(0.0, 1.0, max(vNormal.z, 0.0));
-        float earthshine = 0.08;
-        float litStrength = 1.22;
+        float earthshine = 0.11;
+        float litStrength = 1.16;
         float light = earthshine + falloff * litStrength;
-        light *= 0.74 + limb * 0.32;
+        light *= 0.78 + limb * 0.30;
         light = clamp(light, 0.0, 1.20);
 
-        gl_FragColor = vec4(texel * light, 1.0);
+        vec3 shadowFloor = vec3(0.025) * (1.0 - falloff) * limb;
+        gl_FragColor = vec4(texel * light + shadowFloor, 1.0);
       }
     `,
   });
