@@ -25,10 +25,6 @@ export function createLunarMaterial(texture) {
 
       void main() {
         vec3 texel = texture2D(moonMap, vUv).rgb;
-
-        // Use the visible face normal as a simple screen-space lunar phase mask.
-        // This is intentionally presentation-forward: the displayed illumination
-        // percentage controls how much of the lunar disk reads as sunlit.
         float waning = step(0.5, phase);
         float side = mix(1.0, -1.0, waning);
         float phaseAxis = side * vNormal.x;
@@ -36,7 +32,7 @@ export function createLunarMaterial(texture) {
         float falloff = smoothstep(litThreshold - 0.10, litThreshold + 0.10, phaseAxis);
 
         float limb = smoothstep(0.0, 1.0, max(vNormal.z, 0.0));
-        float earthshine = 0.045;
+        float earthshine = 0.08;
         float litStrength = 1.22;
         float light = earthshine + falloff * litStrength;
         light *= 0.74 + limb * 0.32;
