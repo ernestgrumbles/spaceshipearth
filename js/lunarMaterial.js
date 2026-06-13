@@ -29,18 +29,25 @@ export function createLunarMaterial(texture) {
 
         float waning = step(0.5, phase);
         float side = mix(1.0, -1.0, waning);
-        float phaseAxis = side * vNormal.x;
-        float litThreshold = mix(0.96, -0.96, illum);
-        float falloff = smoothstep(litThreshold - 0.10, litThreshold + 0.10, phaseAxis);
+        float x = side * vNormal.x;
+        float y = vNormal.y;
+        float diskCurve = sqrt(max(0.0, 1.0 - y * y));
+
+        // Crescent mask: illumination controls how far the lit boundary reaches
+        // across the visible lunar disk. Near-new phases become edge slivers
+        // instead of simply dimming the whole sphere.
+        float crescentWidth = max(0.02, illum);
+        float boundary = diskCurve * (1.0 - crescentWidth * 2.0);
+        float falloff = smoothstep(boundary - 0.045, boundary + 0.045, x);
 
         float limb = smoothstep(0.0, 1.0, max(vNormal.z, 0.0));
-        float earthshine = 0.11;
-        float litStrength = 1.16;
+        float earthshine = 0.12;
+        float litStrength = 1.18;
         float light = earthshine + falloff * litStrength;
         light *= 0.78 + limb * 0.30;
         light = clamp(light, 0.0, 1.20);
 
-        vec3 shadowFloor = vec3(0.025) * (1.0 - falloff) * limb;
+        vec3 shadowFloor = vec3(0.03) * (1.0 - falloff) * limb;
         gl_FragColor = vec4(texel * light + shadowFloor, 1.0);
       }
     `,
